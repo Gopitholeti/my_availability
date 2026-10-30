@@ -1,0 +1,40 @@
+:root { color-scheme: light; font-family: system-ui, sans-serif; color: #233b32; background: #f5f7f3; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 900px; margin: auto; padding: 28px 16px; }
+header, nav, .actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+header { justify-content: space-between; }
+h1 { margin: 4px 0 16px; font-size: clamp(1.8rem, 5vw, 2.7rem); }
+h2 { font-size: 1.25rem; }
+.eyebrow, .hint, #account { font-size: .85rem; color: #52665c; }
+button, input, select, textarea { font: inherit; border: 1px solid #aebdb3; border-radius: 9px; padding: 10px 12px; }
+button { cursor: pointer; color: inherit; background: white; min-height: 44px; }
+button:hover { border-color: #214e40; }
+button:disabled { cursor: wait; opacity: .6; }
+:focus-visible { outline: 3px solid #386cc0; outline-offset: 3px; }
+label { display: grid; gap: 6px; margin-bottom: 16px; }
+input, select, textarea { width: 100%; background: white; color: inherit; }
+#login { max-width: 420px; margin-top: 40px; }
+#login-form button, button[type="submit"] { background: #214e40; color: white; }
+#message:not(:empty) { padding: 12px; border: 1px solid #aebdb3; border-radius: 9px; background: white; overflow-wrap: anywhere; }
+nav h2 { flex: 1; text-align: center; min-width: 130px; }
+.legend { font-size: .9rem; }
+.weekdays, .calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.weekdays { text-align: center; margin-bottom: 8px; font-size: .8rem; }
+.day { min-height: 92px; padding: 10px; text-align: left; display: flex; flex-direction: column; gap: 5px; overflow: hidden; }
+.day.free { background: #e0f3e5; border-color: #79a987; }
+.day.busy { background: #fbe4e2; border-color: #cf9690; }
+.day.today { box-shadow: inset 0 0 0 2px #214e40; }
+.day-status { font-size: .75rem; }
+.day-note { font-size: .75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.actions { margin-top: 20px; }
+dialog { width: min(440px, calc(100% - 24px)); max-height: 90dvh; border: 1px solid #aebdb3; border-radius: 16px; padding: 24px; color: inherit; }
+dialog::backdrop { background: #14281e66; }
+#edit-error { color: #9c2525; }
+[hidden] { display: none !important; }
+@media (max-width: 520px) {
+  .day { min-height: 76px; padding: 6px 3px; }
+  .day-status { font-size: .6rem; }
+  .day-note { font-size: .65rem; }
+  .calendar, .weekdays { gap: 3px; }
+}

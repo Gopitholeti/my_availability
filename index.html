@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#214e40">
+  <title>My availability</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div><p class="eyebrow">YOUR PERSONAL AVAILABILITY TRACKER</p><h1>My availability</h1></div>
+      <button id="sign-out" hidden>Sign out</button>
+    </header>
+    <p id="message" role="status" aria-live="polite"></p>
+    <section id="login" hidden>
+      <h2>Welcome back</h2>
+      <p>Sign in with an email link. Your availability stays private.</p>
+      <form id="login-form">
+        <label>Email <input id="email" type="email" autocomplete="email" required></label>
+        <button type="submit">Email me a sign-in link</button>
+      </form>
+    </section>
+    <section id="app" hidden>
+      <p id="account"></p>
+      <nav aria-label="Calendar navigation">
+        <button id="previous" aria-label="Previous month">←</button>
+        <h2 id="month" aria-live="polite"></h2>
+        <button id="next" aria-label="Next month">→</button>
+        <button id="today">Today</button>
+      </nav>
+      <p class="legend">🟢 Free &nbsp; 🔴 Busy &nbsp; ○ Undecided</p>
+      <div class="weekdays" aria-hidden="true"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+      <div id="calendar" class="calendar" aria-label="Availability calendar"></div>
+      <div class="actions">
+        <button id="range">Mark a date range</button>
+        <button id="export">Export backup</button>
+        <button id="refresh">Refresh</button>
+      </div>
+      <p class="hint">Tap a day to edit. Unmarked days are undecided, never automatically free. Changes sync through Supabase.</p>
+    </section>
+    <dialog id="editor">
+      <form id="edit-form">
+        <h2>Edit availability</h2>
+        <label>From <input id="start" type="date" required></label>
+        <label>To <input id="end" type="date" required></label>
+        <label>Status
+          <select id="status"><option value="free">Free</option><option value="busy">Busy</option><option value="undecided">Undecided</option></select>
+        </label>
+        <label>Note (optional)<textarea id="note" maxlength="500" rows="3"></textarea></label>
+        <p class="hint">Saving replaces the status and note on every selected date (up to 366 days). Undecided clears both.</p>
+        <p id="edit-error" role="alert"></p>
+        <div class="actions"><button type="button" id="cancel">Cancel</button><button type="submit">Save</button></div>
+      </form>
+    </dialog>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
