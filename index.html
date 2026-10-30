@@ -16,11 +16,13 @@
     <p id="message" role="status" aria-live="polite"></p>
     <section id="login" hidden>
       <h2>Welcome back</h2>
-      <p>Sign in with an email link. Your availability stays private.</p>
+      <p>Sign in here with your email and password. Your availability stays private.</p>
       <form id="login-form">
-        <label>Email <input id="email" type="email" autocomplete="email" required></label>
-        <button type="submit">Email me a sign-in link</button>
+        <label>Email <input id="email" type="email" autocomplete="username" required></label>
+        <label>Password <input id="password" type="password" autocomplete="current-password" required></label>
+        <button type="submit">Sign in</button>
       </form>
+      <p class="hint">Use your existing Supabase account password. If you have not set one or have forgotten it, see the README for account recovery.</p>
     </section>
     <section id="app" hidden>
       <p id="account"></p>
