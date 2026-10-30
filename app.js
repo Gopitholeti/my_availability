@@ -118,6 +118,7 @@ async function setSession(session) {
   $("app").hidden = !user;
   $("sign-out").hidden = !user;
   $("account").textContent = user?.email ?? "";
+  $("password").value = "";
   if ($("editor").open) $("editor").close();
   render();
   if (user) {
@@ -138,20 +139,23 @@ function openEditor(key, range = false) {
 }
 
 $("login-form").addEventListener("submit", handle(async () => {
-  const button = $("login-form").querySelector("button");
-  button.disabled = true;
+  const controls = [...$("login-form").elements];
+  if (controls.some((control) => control.disabled)) return;
+  const email = $("email").value.trim();
+  const password = $("password").value;
+  controls.forEach((control) => { control.disabled = true; });
+  message("Signing in…");
   try {
-    const redirect = new URL(location.href);
-    redirect.hash = "";
-    redirect.search = "";
-    const { error } = await client.auth.signInWithOtp({
-      email: $("email").value.trim(),
-      options: { shouldCreateUser: false, emailRedirectTo: redirect.href },
+    const { data, error } = await client.auth.signInWithPassword({
+      email,
+      password,
     });
     if (error) throw error;
-    message("Sign-in link requested. Check your email. Only an existing, authorized account can sign in.");
+    if (!data.session) throw new Error("Sign-in did not return a session. Please try again.");
+    await setSession(data.session);
   } finally {
-    button.disabled = false;
+    $("password").value = "";
+    controls.forEach((control) => { control.disabled = false; });
   }
 }));
 
@@ -240,7 +244,9 @@ handle(async () => {
   await setSession(data.session);
   client.auth.onAuthStateChange((event, session) => {
     if (event === "SIGNED_OUT" || session?.user?.id !== user?.id) {
-      setTimeout(handle(() => setSession(session)), 0);
+      setTimeout(handle(async () => {
+        if (session?.user?.id !== user?.id) await setSession(session);
+      }), 0);
     }
   });
 })();
