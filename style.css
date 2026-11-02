@@ -244,3 +244,21 @@ dialog::backdrop {
     gap: 3px;
   }
 }
+
+.day.free {
+  background: #a7dfb5;
+  border-color: #4a9561;
+  color: #143b22;
+}
+
+.day.am {
+  background: #ffda66;
+  border-color: #bd8a13;
+  color: #493300;
+}
+
+.day.pm {
+  background: #aab6c9;
+  border-color: #64748b;
+  color: #17263d;
+}
