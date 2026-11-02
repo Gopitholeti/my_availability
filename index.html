@@ -32,7 +32,7 @@
         <button id="next" aria-label="Next month">→</button>
         <button id="today">Today</button>
       </nav>
-      <p class="legend">🟢 Free &nbsp; 🔴 Busy &nbsp; ○ Undecided</p>
+      <p class="legend">🟢 Free &nbsp; ☀️ AM &nbsp; 🌙 PM &nbsp; 🔴 Existing Busy (assign shift)</p>
       <div class="weekdays" aria-hidden="true"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
       <div id="calendar" class="calendar" aria-label="Availability calendar"></div>
       <div class="actions">
@@ -40,20 +40,23 @@
         <button id="export">Export backup</button>
         <button id="refresh">Refresh</button>
       </div>
-      <p class="hint">Tap a day to edit. Unmarked days are undecided, never automatically free. Changes sync through Supabase.</p>
+      <p class="hint">Tap a day to assign a shift and site. Dates without a shift are green (Free), except existing Busy dates awaiting assignment. Changes sync through Supabase.</p>
     </section>
     <dialog id="editor">
       <form id="edit-form">
         <h2>Edit availability</h2>
         <label>From <input id="start" type="date" required></label>
         <label>To <input id="end" type="date" required></label>
-        <label>Status
-          <select id="status"><option value="free">Free</option><option value="busy">Busy</option><option value="undecided">Undecided</option></select>
+        <label>Shift
+          <select id="shift" required><option value="">Select shift</option><option value="AM">AM</option><option value="PM">PM</option></select>
+        </label>
+        <label>Site
+          <select id="site" required><option value="">Select site</option><option value="NRDC">NRDC</option><option value="WSDC">WSDC</option><option value="HBDC">HBDC</option></select>
         </label>
         <label>Note (optional)<textarea id="note" maxlength="500" rows="3"></textarea></label>
-        <p class="hint">Saving replaces the status and note on every selected date (up to 366 days). Undecided clears both.</p>
+        <p class="hint">Saving replaces the shift, site and note on every selected date (up to 366 days). Clear to free removes all saved details, including notes, for that range.</p>
         <p id="edit-error" role="alert"></p>
-        <div class="actions"><button type="button" id="cancel">Cancel</button><button type="submit">Save</button></div>
+        <div class="actions"><button type="button" id="cancel">Cancel</button><button type="button" id="clear">Clear to free</button><button type="submit">Save</button></div>
       </form>
     </dialog>
   </main>
