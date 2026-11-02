@@ -8,7 +8,6 @@ let month = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let requestId = 0;
 let saving = false;
 let ready = false;
-const labels = { free: "Free", busy: "Busy", undecided: "Undecided" };
 
 function dateKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -62,18 +61,25 @@ function render() {
     const date = new Date(month.getFullYear(), month.getMonth(), day);
     const key = dateKey(date);
     const entry = entries.get(key);
-    const status = entry?.status ?? "undecided";
+    const status = !ready ? "loading" : entry?.shift ? entry.shift.toLowerCase() : entry?.status === "busy" ? "busy" : "free";
+    const label = !ready ? "Loading" : entry?.shift === "AM" ? "☀️ AM" : entry?.shift === "PM" ? "🌙 PM" : status === "busy" ? "Busy" : "Free";
     const button = document.createElement("button");
     button.className = `day ${status}${key === dateKey(new Date()) ? " today" : ""}`;
     button.disabled = !ready;
-    button.setAttribute("aria-label", `${date.toLocaleDateString(undefined, { dateStyle: "full" })}: ${labels[status]}${entry?.note ? `. ${entry.note}` : ""}`);
+    button.setAttribute("aria-label", `${date.toLocaleDateString(undefined, { dateStyle: "full" })}: ${label}${entry?.site ? `, ${entry.site}` : ""}${status === "busy" ? ", assign shift and site" : ""}${entry?.note ? `. ${entry.note}` : ""}`);
     if (key === dateKey(new Date())) button.setAttribute("aria-current", "date");
     const number = document.createElement("strong");
     number.textContent = String(day);
     const state = document.createElement("span");
     state.className = "day-status";
-    state.textContent = labels[status];
+    state.textContent = label;
     button.append(number, state);
+    if (entry?.site) {
+      const site = document.createElement("span");
+      site.className = "day-site";
+      site.textContent = entry.site;
+      button.append(site);
+    }
     if (entry?.note) {
       const note = document.createElement("span");
       note.className = "day-note";
@@ -94,12 +100,12 @@ async function load() {
   const rows = [];
   let after = null;
   while (true) {
-    let query = client.from("availability").select("date,status,note")
+    let query = client.from("availability").select("date,status,note,shift,site")
       .eq("user_id", currentUser).order("date").limit(500);
     if (after) query = query.gt("date", after);
     const { data, error } = await query;
     if (id !== requestId || user?.id !== currentUser) return;
-    if (error) throw error;
+    if (error) throw new Error(`Could not load availability: ${error.message}. If you have not upgraded the database, run migration-shifts.sql first.`);
     rows.push(...data);
     if (data.length === 0) break;
     after = data[data.length - 1].date;
@@ -132,7 +138,8 @@ function openEditor(key, range = false) {
   const entry = range ? null : entries.get(key);
   $("start").value = key;
   $("end").value = key;
-  $("status").value = entry?.status ?? "undecided";
+  $("shift").value = entry?.shift ?? "";
+  $("site").value = entry?.site ?? "";
   $("note").value = entry?.note ?? "";
   $("edit-error").textContent = "";
   $("editor").showModal();
@@ -187,22 +194,25 @@ $("refresh").addEventListener("click", handle(async () => {
 }));
 window.addEventListener("focus", handle(async () => { await load(); }));
 
-$("edit-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
+async function saveAvailability(clear = false) {
   if (saving || !user) return;
   const controls = [...$("edit-form").elements];
   try {
     const dates = datesBetween($("start").value, $("end").value);
-    const status = $("status").value;
+    const shift = $("shift").value;
+    const site = $("site").value;
     const note = $("note").value.trim();
+    if (!clear && (!["AM", "PM"].includes(shift) || !["NRDC", "WSDC", "HBDC"].includes(site))) {
+      throw new Error("Choose a shift (AM or PM) and a site.");
+    }
     const currentUser = user.id;
     saving = true;
     controls.forEach((control) => { control.disabled = true; });
     $("edit-error").textContent = "";
-    const result = status === "undecided"
+    const result = clear
       ? await client.from("availability").delete().eq("user_id", currentUser).in("date", dates)
       : await client.from("availability").upsert(
-        dates.map((date) => ({ user_id: currentUser, date, status, note })),
+        dates.map((date) => ({ user_id: currentUser, date, status: "busy", shift, site, note })),
         { onConflict: "user_id,date" },
       );
     if (result.error) throw result.error;
@@ -220,11 +230,17 @@ $("edit-form").addEventListener("submit", async (event) => {
     saving = false;
     controls.forEach((control) => { control.disabled = false; });
   }
+}
+
+$("edit-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  return saveAvailability();
 });
+$("clear").addEventListener("click", () => saveAvailability(true));
 
 $("export").addEventListener("click", handle(async () => {
   await load();
-  const backup = { version: 1, exportedAt: new Date().toISOString(), availability: [...entries.values()] };
+  const backup = { version: 2, exportedAt: new Date().toISOString(), availability: [...entries.values()] };
   const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }));
   const link = document.createElement("a");
   link.href = url;
