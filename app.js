@@ -202,7 +202,7 @@ async function saveAvailability(clear = false) {
     const shift = $("shift").value;
     const site = $("site").value;
     const note = $("note").value.trim();
-    if (!clear && (!["AM", "PM"].includes(shift) || !["NRDC", "WSDC", "HBDC"].includes(site))) {
+    if (!clear && (!["AM", "PM"].includes(shift) || !["NRDC", "WSDC", "HBDC", "Other"].includes(site))) {
       throw new Error("Choose a shift (AM or PM) and a site.");
     }
     const currentUser = user.id;
