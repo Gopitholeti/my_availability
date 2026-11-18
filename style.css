@@ -19,8 +19,12 @@ input, select, textarea { width: 100%; background: white; color: inherit; }
 #message:not(:empty) { padding: 12px; border: 1px solid #aebdb3; border-radius: 9px; background: white; overflow-wrap: anywhere; }
 nav h2 { flex: 1; text-align: center; min-width: 130px; }
 .legend { font-size: .9rem; }
-.weekdays, .calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.weekdays, .calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)) minmax(135px, .85fr); gap: 6px; }
 .weekdays { text-align: center; margin-bottom: 8px; font-size: .8rem; }
+.week-heading { font-weight: 600; }
+.week-total { align-self: stretch; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 10px; text-align: right; color: #233b32; font-size: .85rem; }
+.week-total strong { font-size: 1rem; }
+.week-total small { color: #52665c; }
 .day { min-height: 92px; padding: 10px; text-align: left; display: flex; flex-direction: column; gap: 5px; overflow: hidden; transition: filter 120ms ease; }
 .day.free { background: #a7dfb5; border-color: #4a9561; color: #143b22; }
 .day.am { background: #ffda66; border-color: #bd8a13; color: #493300; }
@@ -35,7 +39,10 @@ nav h2 { flex: 1; text-align: center; min-width: 130px; }
 .day-note { grid-column: 1 / -1; min-width: 0; font-size: .75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .day-time { grid-column: 1 / -1; min-width: 0; font-size: .75rem; overflow-wrap: anywhere; }
 .shift-times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.shift-times input { min-width: 0; }
+.time-selects { display: flex; align-items: center; gap: 4px; }
+.time-selects select { min-width: 0; padding-inline: 8px; }
+.time-selects select:first-child { flex: 1.2; }
+.time-selects select:last-child { flex: 1; }
 .checkbox { display: flex; align-items: center; }
 .checkbox input { width: auto; }
 .pay-summary:not(:empty) { background: white; border: 1px solid #aebdb3; border-radius: 9px; padding: 10px 12px; font-size: .85rem; }
@@ -50,6 +57,11 @@ dialog::backdrop { background: #14281e66; }
   .day:hover { filter: brightness(0.96); }
 }
 @media (max-width: 520px) {
+  .weekdays, .calendar { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .week-heading { display: none; }
+  .week-total { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; justify-content: flex-end; align-items: baseline; padding: 4px 2px 10px; text-align: right; }
+  .week-total strong { font-size: .85rem; }
+  .week-total small { font-size: .7rem; }
   .day { min-height: 88px; padding: 6px 3px; }
   .day.am > strong, .day.pm > strong { font-size: .75rem; }
   .day.am .day-status, .day.pm .day-status { font-size: .55rem; }
