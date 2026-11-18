@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#214e40">
   <title>My availability</title>
-  <link rel="stylesheet" href="./style.css?v=20261118-1">
+  <link rel="stylesheet" href="./style.css?v=20261118-3">
 </head>
 <body>
   <main>
@@ -34,8 +34,7 @@
       </nav>
       <p class="legend">🟢 Free &nbsp; ☀️ AM &nbsp; 🌙 PM</p>
       <p id="pay-summary" class="pay-summary" aria-live="polite"></p>
-      <p class="hint">Gross estimates use the supplied 2026 rates, except ordinary public-holiday hours use $76.67/h from the 2024 guide. Overnight shifts count toward the month they start in.</p>
-      <div class="weekdays" aria-hidden="true"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+      <div class="weekdays" aria-hidden="true"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span><span class="week-heading">Week</span></div>
       <div id="calendar" class="calendar" aria-label="Availability calendar"></div>
       <div class="actions">
         <button id="range">Mark a date range</button>
@@ -56,8 +55,12 @@
           <select id="site" required><option value="">Select site</option><option value="NRDC">NRDC</option><option value="WSDC">WSDC</option><option value="HBDC">HBDC</option></select>
         </label>
         <div class="shift-times">
-          <label>Start time <input id="start-time" type="time"></label>
-          <label>End time <input id="end-time" type="time"></label>
+          <label>Start time
+            <span class="time-selects"><select id="start-hour" aria-label="Start hour"><option value="">HH</option></select>:<select id="start-minute" aria-label="Start minute"><option value="">MM</option></select></span>
+          </label>
+          <label>End time
+            <span class="time-selects"><select id="end-hour" aria-label="End hour"><option value="">HH</option></select>:<select id="end-minute" aria-label="End minute"><option value="">MM</option></select></span>
+          </label>
         </div>
         <p class="hint">Times are optional. An earlier end time means the shift ends the next day. All time is paid.</p>
         <label id="start-holiday-label" class="checkbox" hidden><input id="start-holiday" type="checkbox"> Public holiday on the start date</label>
@@ -70,6 +73,6 @@
       </form>
     </dialog>
   </main>
-  <script type="module" src="./app.js?v=20261118-2"></script>
+  <script type="module" src="./app.js?v=20261118-3"></script>
 </body>
 </html>
