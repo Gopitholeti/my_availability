@@ -4,7 +4,7 @@ begin;
 
 alter table public.availability
   add column shift text check (shift in ('AM', 'PM')),
-  add column site text check (site in ('NRDC', 'WSDC', 'HBDC')),
+  add column site text check (site in ('NRDC', 'WSDC', 'HBDC','Other')),
   add column start_time time without time zone,
   add column end_time time without time zone,
   add column start_holiday boolean not null default false,
