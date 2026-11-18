@@ -1,5 +1,5 @@
 import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
-import { estimate, hours, money, restWarnings, shiftTimes } from "./pay.mjs";
+import { estimate, hours, money, restWarnings, shiftTimes } from "./pay.mjs?v=20261118-2";
 
 const $ = (id) => document.getElementById(id);
 let client;
