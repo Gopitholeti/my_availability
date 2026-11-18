@@ -1,5 +1,5 @@
 import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
-import { estimate, hours, money, restWarnings, shiftTimes } from "./pay.mjs?v=20261118-2";
+import { estimate, hours, money, restWarnings, shiftTimes } from "./pay.mjs?v=20261118-3";
 
 const $ = (id) => document.getElementById(id);
 let client;
@@ -9,6 +9,7 @@ let month = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let requestId = 0;
 let saving = false;
 let ready = false;
+let warningsForWeek = new Map();
 
 function dateKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -41,6 +42,84 @@ function message(text) {
   $("message").textContent = text;
 }
 
+function populateTimeDropdowns() {
+  for (const [id, limit] of [["start-hour", 24], ["end-hour", 24], ["start-minute", 60], ["end-minute", 60]]) {
+    const select = $(id);
+    for (let value = 0; value < limit; value++) {
+      const option = document.createElement("option");
+      option.value = String(value).padStart(2, "0");
+      option.textContent = option.value;
+      select.append(option);
+    }
+  }
+}
+
+populateTimeDropdowns();
+
+function setTime(prefix, value) {
+  const [hour = "", minute = ""] = value?.slice(0, 5).split(":") ?? [];
+  $(`${prefix}-hour`).value = hour;
+  $(`${prefix}-minute`).value = minute;
+}
+
+function readTime(prefix) {
+  const hour = $(`${prefix}-hour`).value;
+  const minute = $(`${prefix}-minute`).value;
+  if (!hour && !minute) return null;
+  if (!hour || !minute) throw new Error("Choose both the hour and minute, or leave both times blank.");
+  return `${hour}:${minute}`;
+}
+
+function totalsFor(list) {
+  let minutes = 0, cents = 0, unpriced = 0, untimed = 0;
+  for (const entry of list) {
+    if (!entry.shift) {
+      if (entry.status === "busy") untimed++;
+      continue;
+    }
+    if (!entry.start_time && !entry.end_time) {
+      untimed++;
+      continue;
+    }
+    const pay = estimate(entry);
+    minutes += pay.minutes;
+    cents += pay.cents;
+    unpriced += pay.unpriced;
+  }
+  return { minutes, cents, unpriced, untimed };
+}
+
+function weekStart(value) {
+  const date = parseDate(value);
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  return date;
+}
+
+function appendWeekTotal(startDate) {
+  const monday = weekStart(startDate);
+  const mondayKey = dateKey(monday);
+  const sunday = new Date(monday);
+  sunday.setDate(sunday.getDate() + 6);
+  const sundayKey = dateKey(sunday);
+  const list = [...entries.values()].filter((entry) => entry.date >= mondayKey && entry.date <= sundayKey);
+  const total = totalsFor(list);
+  const warningCount = list.filter((entry) => entry.shift && warningsForWeek.has(entry.date)).length;
+  const cell = document.createElement("div");
+  cell.className = "week-total";
+  cell.setAttribute("aria-label", `Week ending ${sunday.toLocaleDateString(undefined, { dateStyle: "medium" })}`);
+  const amount = document.createElement("strong");
+  amount.textContent = total.minutes ? `${hours(total.minutes)} · ${money(total.cents)}` : "No timed shifts";
+  const detail = document.createElement("small");
+  detail.textContent = [
+    total.untimed ? `${total.untimed} without times` : "",
+    total.unpriced ? `${hours(total.unpriced)} unpriced` : "",
+    warningCount ? `${warningCount} to review` : "",
+  ].filter(Boolean).join(" · ");
+  cell.append(amount);
+  if (detail.textContent) cell.append(detail);
+  $("calendar").append(cell);
+}
+
 function handle(action) {
   return async (event) => {
     event?.preventDefault();
@@ -58,28 +137,22 @@ function render() {
   const offset = (month.getDay() + 6) % 7;
   for (let i = 0; i < offset; i++) $("calendar").append(document.createElement("span"));
   const count = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-  const warnings = restWarnings([...entries.values()]);
-  let minutes = 0, cents = 0, unpriced = 0, untimed = 0, review = 0;
+  warningsForWeek = restWarnings([...entries.values()]);
+  let weekColumn = offset;
+  let weekDate = new Date(month.getFullYear(), month.getMonth(), 1);
+  weekDate.setDate(weekDate.getDate() - offset);
   for (let day = 1; day <= count; day++) {
     const date = new Date(month.getFullYear(), month.getMonth(), day);
     const key = dateKey(date);
     const entry = entries.get(key);
-    const pay = entry?.shift ? estimate(entry) : null;
-    const timeLabel = pay ? `${entry.start_time.slice(0, 5)}–${entry.end_time.slice(0, 5)}${shiftTimes(entry).end >= 1440 ? " (+1 day)" : ""}` : "";
-    if (pay) {
-      minutes += pay.minutes;
-      cents += pay.cents;
-      unpriced += pay.unpriced;
-      if (warnings.has(key)) review++;
-    } else if (entry?.shift || entry?.status === "busy") {
-      untimed++;
-    }
+    const pay = entry?.shift && entry.start_time && entry.end_time ? estimate(entry) : null;
+    const timeLabel = pay ? `${entry.start_time.slice(0, 5)}–${entry.end_time.slice(0, 5)}` : "";
     const status = !ready ? "loading" : entry?.shift ? entry.shift.toLowerCase() : entry?.status === "busy" ? "busy" : "free";
     const label = !ready ? "Loading" : entry?.shift === "AM" ? "☀️ AM" : entry?.shift === "PM" ? "🌙 PM" : status === "busy" ? "Busy" : "Free";
     const button = document.createElement("button");
     button.className = `day ${status}${key === dateKey(new Date()) ? " today" : ""}`;
     button.disabled = !ready;
-    button.setAttribute("aria-label", `${date.toLocaleDateString(undefined, { dateStyle: "full" })}: ${label}${entry?.site ? `, ${entry.site}` : ""}${status === "busy" ? ", assign shift and site" : ""}${pay ? `, ${timeLabel}, ${hours(pay.minutes)} paid` : ""}${warnings.has(key) ? `. ${warnings.get(key)}` : ""}${entry?.note ? `. ${entry.note}` : ""}`);
+    button.setAttribute("aria-label", `${date.toLocaleDateString(undefined, { dateStyle: "full" })}: ${label}${entry?.site ? `, ${entry.site}` : ""}${status === "busy" ? ", assign shift and site" : ""}${pay ? `, ${timeLabel}, ${hours(pay.minutes)} paid` : ""}${warningsForWeek.has(key) ? `. ${warningsForWeek.get(key)}` : ""}${entry?.note ? `. ${entry.note}` : ""}`);
     if (key === dateKey(new Date())) button.setAttribute("aria-current", "date");
     const number = document.createElement("strong");
     number.textContent = String(day);
@@ -96,7 +169,7 @@ function render() {
     if (pay) {
       const time = document.createElement("span");
       time.className = "day-time";
-      time.textContent = `${timeLabel}${warnings.has(key) ? " ⚠️" : ""}`;
+      time.textContent = `${timeLabel}${warningsForWeek.has(key) ? " ⚠️" : ""}`;
       button.append(time);
     }
     if (entry?.note) {
@@ -107,16 +180,19 @@ function render() {
     }
     button.addEventListener("click", () => openEditor(key));
     $("calendar").append(button);
+    weekColumn++;
+    if (weekColumn === 7) {
+      appendWeekTotal(dateKey(weekDate));
+      weekColumn = 0;
+      weekDate.setDate(weekDate.getDate() + 7);
+    }
   }
+  if (weekColumn > 0) appendWeekTotal(dateKey(weekDate));
   $("range").disabled = !ready;
   $("export").disabled = !ready;
-  const partial = unpriced || untimed || review;
-  $("pay-summary").textContent = !ready ? "" : [
-    `${hours(minutes)} logged · ${money(cents)} ${partial ? "provisional gross subtotal" : "estimated gross pay"}`,
-    unpriced ? `${hours(unpriced)} unpriced` : "",
-    untimed ? `${untimed} without times` : "",
-    review ? `${review} with a short gap or overlap to review` : "",
-  ].filter(Boolean).join(" · ");
+  const monthPrefix = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}-`;
+  const monthTotal = totalsFor([...entries.values()].filter((entry) => entry.date.startsWith(monthPrefix)));
+  $("pay-summary").textContent = !ready ? "" : `${hours(monthTotal.minutes)} · ${money(monthTotal.cents)}${monthTotal.untimed ? ` · ${monthTotal.untimed} without times` : ""}${monthTotal.unpriced ? ` · ${hours(monthTotal.unpriced)} unpriced` : ""}`;
 }
 
 async function load() {
@@ -166,8 +242,8 @@ function openEditor(key, range = false) {
   $("end").value = key;
   $("shift").value = entry?.shift ?? "";
   $("site").value = entry?.site ?? "";
-  $("start-time").value = entry?.start_time?.slice(0, 5) ?? "";
-  $("end-time").value = entry?.end_time?.slice(0, 5) ?? "";
+  setTime("start", entry?.start_time);
+  setTime("end", entry?.end_time);
   $("start-holiday").checked = !!entry?.start_holiday;
   $("end-holiday").checked = !!entry?.end_holiday;
   $("note").value = entry?.note ?? "";
@@ -177,9 +253,10 @@ function openEditor(key, range = false) {
 }
 
 function getTiming() {
-  const start_time = $("start-time").value || null;
-  const end_time = $("end-time").value || null;
-  const times = shiftTimes({ start_time, end_time });
+  const start_time = readTime("start");
+  const end_time = readTime("end");
+  if (!!start_time !== !!end_time) throw new Error("Choose both start and end times, or leave both blank.");
+  const times = start_time ? shiftTimes({ start_time, end_time }) : null;
   const single = $("start").value === $("end").value;
   return {
     start_time, end_time,
@@ -194,7 +271,8 @@ function previewPay() {
   preview.hidden = true;
   $("start-holiday-label").hidden = true;
   $("end-holiday-label").hidden = true;
-  if (!$("start-time").value || !$("end-time").value || !$("start").value || !$("end").value) return;
+  const anyTime = ["start-hour", "start-minute", "end-hour", "end-minute"].some((id) => $(id).value);
+  if (!anyTime || !$("start").value || !$("end").value) return;
   preview.hidden = false;
   try {
     const dates = datesBetween($("start").value, $("end").value);
@@ -205,7 +283,8 @@ function previewPay() {
     const proposed = new Map(entries);
     for (const entry of updates) proposed.set(entry.date, entry);
     const warnings = restWarnings([...proposed.values()]);
-    const pay = estimate(updates[0]);
+    if (!timing.start_time || !timing.end_time) throw new Error("Choose both start and end times.");
+    const pay = estimate({ ...updates[0], ...timing });
     const warning = warnings.get(dates[0]);
     const summary = document.createElement("strong");
     summary.textContent = `${dates.length > 1 ? "First date: " : ""}${hours(pay.minutes)} paid · ${money(pay.cents)} ${pay.unpriced || warning ? "provisional gross subtotal" : "estimated gross pay"}`;
@@ -227,8 +306,9 @@ function previewPay() {
   }
 }
 
-for (const id of ["start", "end", "start-time", "end-time", "start-holiday", "end-holiday"]) {
+for (const id of ["start", "end", "start-hour", "start-minute", "end-hour", "end-minute", "start-holiday", "end-holiday"]) {
   $(id).addEventListener("input", previewPay);
+  $(id).addEventListener("change", previewPay);
 }
 
 $("login-form").addEventListener("submit", handle(async () => {
