@@ -108,7 +108,7 @@ function appendWeekTotal(startDate) {
   cell.className = "week-total";
   cell.setAttribute("aria-label", `Week ending ${sunday.toLocaleDateString(undefined, { dateStyle: "medium" })}`);
   const amount = document.createElement("strong");
-  amount.textContent = total.minutes ? `${hours(total.minutes)} · ${money(total.cents)}` : "No timed shifts";
+  amount.textContent = !ready ? "Loading" : total.minutes ? `${hours(total.minutes)} · ${money(total.cents)}` : "No timed shifts";
   const detail = document.createElement("small");
   detail.textContent = [
     total.untimed ? `${total.untimed} without times` : "",
@@ -135,14 +135,17 @@ function render() {
   $("month").textContent = month.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   $("calendar").replaceChildren();
   const offset = (month.getDay() + 6) % 7;
-  for (let i = 0; i < offset; i++) $("calendar").append(document.createElement("span"));
-  const count = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const firstDate = new Date(month.getFullYear(), month.getMonth(), 1);
+  const lastDate = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+  const cursor = new Date(firstDate);
+  cursor.setDate(cursor.getDate() - offset);
+  const finalWeekdayOffset = (7 - lastDate.getDay()) % 7;
+  const finalDate = new Date(lastDate);
+  finalDate.setDate(finalDate.getDate() + finalWeekdayOffset);
+  const weekDate = new Date(cursor);
   warningsForWeek = restWarnings([...entries.values()]);
-  let weekColumn = offset;
-  let weekDate = new Date(month.getFullYear(), month.getMonth(), 1);
-  weekDate.setDate(weekDate.getDate() - offset);
-  for (let day = 1; day <= count; day++) {
-    const date = new Date(month.getFullYear(), month.getMonth(), day);
+  while (cursor <= finalDate) {
+    const date = new Date(cursor);
     const key = dateKey(date);
     const entry = entries.get(key);
     const pay = entry?.shift && entry.start_time && entry.end_time ? estimate(entry) : null;
@@ -150,12 +153,14 @@ function render() {
     const status = !ready ? "loading" : entry?.shift ? entry.shift.toLowerCase() : entry?.status === "busy" ? "busy" : "free";
     const label = !ready ? "Loading" : entry?.shift === "AM" ? "☀️ AM" : entry?.shift === "PM" ? "🌙 PM" : status === "busy" ? "Busy" : "Free";
     const button = document.createElement("button");
-    button.className = `day ${status}${key === dateKey(new Date()) ? " today" : ""}`;
+    const otherMonth = date.getMonth() !== month.getMonth();
+    button.className = `day ${status}${otherMonth ? " other-month" : ""}${key === dateKey(new Date()) ? " today" : ""}`;
     button.disabled = !ready;
+    button.setAttribute("data-date", key);
     button.setAttribute("aria-label", `${date.toLocaleDateString(undefined, { dateStyle: "full" })}: ${label}${entry?.site ? `, ${entry.site}` : ""}${status === "busy" ? ", assign shift and site" : ""}${pay ? `, ${timeLabel}, ${hours(pay.minutes)} paid` : ""}${warningsForWeek.has(key) ? `. ${warningsForWeek.get(key)}` : ""}${entry?.note ? `. ${entry.note}` : ""}`);
     if (key === dateKey(new Date())) button.setAttribute("aria-current", "date");
     const number = document.createElement("strong");
-    number.textContent = String(day);
+    number.textContent = String(date.getDate());
     const state = document.createElement("span");
     state.className = "day-status";
     state.textContent = label;
@@ -180,14 +185,12 @@ function render() {
     }
     button.addEventListener("click", () => openEditor(key));
     $("calendar").append(button);
-    weekColumn++;
-    if (weekColumn === 7) {
+    if (date.getDay() === 0) {
       appendWeekTotal(dateKey(weekDate));
-      weekColumn = 0;
       weekDate.setDate(weekDate.getDate() + 7);
     }
+    cursor.setDate(cursor.getDate() + 1);
   }
-  if (weekColumn > 0) appendWeekTotal(dateKey(weekDate));
   $("range").disabled = !ready;
   $("export").disabled = !ready;
   const monthPrefix = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}-`;
@@ -368,7 +371,7 @@ async function saveAvailability(clear = false) {
     const shift = $("shift").value;
     const site = $("site").value;
     const note = $("note").value.trim();
-    if (!clear && (!["AM", "PM"].includes(shift) || !["NRDC", "WSDC", "HBDC", "Other"].includes(site))) {
+    if (!clear && (!["AM", "PM"].includes(shift) || !["NRDC", "WSDC", "HBDC"].includes(site))) {
       throw new Error("Choose a shift (AM or PM) and a site.");
     }
     const timing = clear ? null : getTiming();
